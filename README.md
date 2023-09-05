@@ -107,3 +107,103 @@ Like generating regex expresison with Perl5 extensions.
 
 There you have it. This library is intuitive, extensible, modular, and dynamic.
 Why not use it?
+
+## Classes:
+
+### Char-level Regex:
+
+#### A: Special Chars 
+
+ANY -> ascii 32~122 
+(ANCHOR_START)
+(ANCHOR_END)
+WHITESPACE -> ascii 9~13 & 32 [ \t\n\r\f\v]
+NOTWHITESPACE 
+WORD -> ascii 48~255 [a-zA-Z0-9_]
+NOTWORD
+DIGIT -> ascii 48~57 [0-9]
+NOTDIGIT
+
+#### B: Complex Chars
+
+Range
+Set
+NotSet
+
+### Algorithm Design 
+
+1. Given two char-level regex `x` and `y`, and identify their corresponding matching char set `Sx` and `Sy`.
+
+```python
+x = Range('a', 'w')
+y = Set(*['x', 'y', 'z'])
+...
+Sx => {'a', 'b', 'c', ..., 'w'}
+Sy => {'x', 'y', 'z'}
+```
+2. Do __and__ or __or__ operator between `Sx` and `Sy` and obtain the resulting set `Sz`.
+
+```python
+# if op == 'and':
+    # Sz = Sx & Sy
+# if op == 'or':
+Sz = Sx | Sy
+...
+Sz => {'a', 'b', ..., 'z'}
+```
+
+3. Sort the char in `Sz` according to their ascii code (or unicode) order. 
+
+```python
+Sz = ['a', ..., 'z']
+```
+
+4. Group the consecutive chars. 
+
+```
+Sz -> G1, G2, ... 
+G1 = ['a', ..., 'z']
+G2 -> not G2 in this example.
+```
+5. Make each group a `Range` class for those group with more than 2 elements. 
+
+G1 -> Range('a', 'z')
+
+6.1. Convert Ranges to matching special char 
+
+[0-9] -> [\d]
+
+6.2. Combine each non-consecutive groups using `Set`. 
+
+6.3. Convert Set to NotSet if its invert is a small group or range.
+
+# Complex Classes
+
+Or
+Amount
+Multi
+Optional
+
+### Algorithm Design for same-class operation 
+
+#### Amount 
+
+#### Multi 
+
+#### Optional 
+
+#### Or
+
+# Advance Classes:
+
+Extension
+NamedGroup
+NamedReference
+NumberedReference
+Comment
+IfAhead
+IfNotAhead
+IfBehind
+IfNotBehind
+Group
+IfGroup

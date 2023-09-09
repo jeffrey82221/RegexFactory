@@ -17,21 +17,19 @@ def test_or_for_char_regex():
     assert Range('4', '7') | (Range('0', '4') | Range('7', '9')) == DIGIT 
     assert NotSet('a') | NotSet('b') == ANY
 
+def test_or_for_compositional_regex():
+    assert Or(Range('1', '4'), Set(*['a', 'b'])) | Set(*['a', 'b']) == Or(Range('1', '4'), Set(*['a', 'b']))
+    assert Or(Amount('a', 2), Amount('b', 4)).__or__(Or(Amount('b', 4), Amount('c', 3)))  == Or(Amount('a', 2), Amount('b', 4), Amount('c', 3))
+    assert Or(Range('1', '4'), Set(*['a', 'b'])) | Or(Range('1', '4'), Set(*['a', 'b']))  == Or(Range('1', '4'), Set(*['a', 'b']))
+    assert Or(Range('1', '4')) | Or(Set(*['a', 'b']))  == Or(Range('1', '4'), Set(*['a', 'b']))
+    assert Or(Range('1', '4')) | Or(Set(*['a', 'b']), Amount('3', 3))  == Or(Range('1', '4'), Set(*['a', 'b']), Amount('3', 3))
+    assert Or(Amount('a', 2), Range('0', '5')) | Or(Amount('b', 3), Range('5', '9')) == Or(Amount('a', 2), Amount('b', 3), DIGIT)
+
 def test_group_consecutive():
     assert CharRegexPattern._group_consecutive([1,3,5]) == [[1], [3], [5]]
     assert CharRegexPattern._group_consecutive([1,2,3]) == [[1,2,3]]
     assert CharRegexPattern._group_consecutive([1,2,3,5,6]) == [[1,2,3], [5,6]]
-    
-def test_find_merged_regex():
-    assert CharRegexPattern._find_merged_regex([Range('0', '5'), Range('4', '9'), Range('a', 'd')]) == {
-        tuple([Range('0', '5'), Range('4', '9')]): DIGIT
-    }
-    assert CharRegexPattern._find_merged_regex([Range('0', '5'), Range('4', '9'), Range('3', '7'), Range('a', 'd')]) == {
-        tuple([Range('0', '5'), Range('4', '9'), Range('3', '7')]): DIGIT,
-    }
-    assert CharRegexPattern._find_merged_regex([Range('0', '5'), Range('4', '9'), Range('3', '7'), WORD, Set('\n')]) == {
-        tuple([Range('0', '5'), Range('4', '9'), Range('3', '7'), WORD]): WORD
-    }
+
 
 def test_match_special_chars():
     assert SpecialCharRegexPattern.match_special_char_regex(
@@ -41,8 +39,3 @@ def test_match_special_chars():
         ['0', '1', '2', '3', '4']
     ) == None
 
-def test_combination_generate():
-    results = []
-    for e in CharRegexPattern._combination_generate([1,2,3]):
-        results.append(e)
-    assert results == [(1,2), (1,3), (2, 3), (1,), (2,), (3,), ]

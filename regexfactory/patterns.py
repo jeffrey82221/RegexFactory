@@ -5,11 +5,16 @@ Regex Pattern Subclasses
 Module for Regex pattern classes like :code:`[^abc]` or :code:`(abc)` or :code:`a|b`
 
 """
-
+from functools import reduce
 import typing as t
+from .utils import reduce_regex_list
 from regexfactory.pattern import RegexPattern, ValidPatternType
 
-class Or(RegexPattern):
+class CompositionalRegexPattern(RegexPattern):
+    def __or__(self, other: RegexPattern) -> RegexPattern:
+        return Or(self, other)
+    
+class Or(CompositionalRegexPattern):
     """
     For matching multiple patterns.
     This pattern `or` that pattern `or` that other pattern.
@@ -43,9 +48,34 @@ class Or(RegexPattern):
             )
         )
         super().__init__((regex))
-        self._patterns = patterns    
+        self._patterns = set(patterns)
+    
+    def __or__(self, other: RegexPattern) -> RegexPattern:
+        if isinstance(other, Or):
+            merge_mapping = dict()
+            for left_pattern in self._patterns:
+                for right_pattern in other._patterns:
+                    if left_pattern != right_pattern:
+                        union_pattern = left_pattern | right_pattern
+                        if not isinstance(union_pattern, Or):
+                            merge_mapping[(left_pattern, right_pattern)] = union_pattern
+            regex_groups = list(self._patterns | other._patterns)
+            regex_groups = reduce_regex_list(regex_groups, mapping=merge_mapping)
+            patterns = sorted(regex_groups, key=str)
+            return Or(*list(set(patterns)))
+        else:
+            return other.__or__(self)
+    
+    def __eq__(self, other: t.Any) -> bool:
+        """
+        Returns whether or not two :class:`ValidPatternType`'s have the same regex.
+        Otherwise return false.
+        """
+        if isinstance(other, Or):
+            return set(self._patterns) == set(other._patterns)
+        return super().__eq__(other)
 
-class Amount(RegexPattern):
+class Amount(CompositionalRegexPattern):
     """
     For matching multiple occurences of a :class:`ValidPatternType`.
     You can match a specific amount of occurences only.
@@ -99,7 +129,7 @@ class Amount(RegexPattern):
         super().__init__(regex)
         self._pattern = pattern
 
-class Multi(RegexPattern):
+class Multi(CompositionalRegexPattern):
     """
     Matches one or more occurences of the given :class:`ValidPatternType`.
     If given :code:`match_zero=True` to the init method it matches zero or more occurences.
@@ -118,7 +148,7 @@ class Multi(RegexPattern):
         super().__init__(regex + suffix)
         self._pattern = pattern
 
-class Optional(RegexPattern):
+class Optional(CompositionalRegexPattern):
     """
     Matches the passed :class:`ValidPatternType` between zero and one times.
     Functions the same as :code:`Amount(pattern, 0, 1)`.

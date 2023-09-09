@@ -7,11 +7,11 @@ More information about special characters in python regex available
 `here <https://docs.python.org/3/library/re.html#regular-expression-syntax>`__
 """
 from functools import reduce
-from typing import Optional, List, Iterator, Tuple, Dict
+from typing import Optional
 from .pattern import RegexPattern
 from .patterns import Or
+from .utils import reduce_regex_list, find_merge_ways
 from regexfactory.pattern import RegexPattern, ValidPatternType
-import itertools
 
 
 class CharRegexPattern(RegexPattern):
@@ -41,13 +41,8 @@ class CharRegexPattern(RegexPattern):
             else:
                 regex_groups = the_ranges
             # check if any of the combination of groups match those special characters
-            merged_regex_mapping_dict = CharRegexPattern._find_merged_regex(regex_groups)
-            merged_regex_from_list = sorted([e for e in merged_regex_mapping_dict.keys()], key=len, reverse=True)
-            for merged_regex_tuple in merged_regex_from_list:
-                if set(merged_regex_tuple).issubset(regex_groups):
-                    for reg in merged_regex_tuple:
-                        regex_groups.remove(reg)
-                    regex_groups.append(merged_regex_mapping_dict[merged_regex_tuple])
+            mapping = find_merge_ways(regex_groups, example_inference_callable=SpecialCharRegexPattern.match_special_char_regex)
+            regex_groups = reduce_regex_list(regex_groups, mapping=mapping)
             if len(regex_groups) > 1:
                 return Or(*regex_groups)
             elif len(regex_groups) == 1:
@@ -62,33 +57,6 @@ class CharRegexPattern(RegexPattern):
                 return Or(self, a)
         else:
             return Or(self, a)
-    
-    @staticmethod
-    def _find_merged_regex(regex_groups: List['CharRegexPattern']) -> Dict[Tuple['CharRegexPattern'], 'CharRegexPattern']:
-        try:
-            merged_groups = dict()
-            for mg in CharRegexPattern._combination_generate(regex_groups):
-                ue = reduce(lambda x,y: x|y, map(lambda m: m.examples, mg))
-                if sp_char_regex:=SpecialCharRegexPattern.match_special_char_regex(ue):
-                    if not any(map(lambda key: ue.issubset(merged_groups[key]['examples']), merged_groups.keys())):
-                        merged_groups[tuple(mg)] = {
-                            'examples': ue,
-                            'regex': sp_char_regex
-                        }
-            for key in merged_groups:
-                merged_groups[key] = merged_groups[key]['regex']
-            return merged_groups
-        except BaseException as e:
-            msg = 'Input:' + str(regex_groups)
-            raise ValueError(msg) from e
-
-    @staticmethod
-    def _combination_generate(input_list) -> Iterator[Tuple['CharRegexPattern']]:
-        length = len(input_list)
-        for i in range(length-1, 0, -1):
-            for e in itertools.combinations(input_list, i):
-                yield e
-
 
     @staticmethod
     def _group_consecutive(ascii_list):
@@ -115,31 +83,31 @@ class SpecialCharRegexPattern(CharRegexPattern):
             if examples == special_char.examples:
                 return special_char
 #: (Dot.) In the default mode, this matches any character except a newline. If the :data:`re.DOTALL` flag has been specified, this matches any character including a newline.
-ANY = CharRegexPattern(r".")
+ANY = SpecialCharRegexPattern(r".")
 
 #: (Caret.) Matches the start of the string, and in  :data:`re.MULTILINE` mode also matches immediately after each newline.
-ANCHOR_START = CharRegexPattern(r"^")
+ANCHOR_START = SpecialCharRegexPattern(r"^")
 
 #: Matches the end of the string or just before the newline at the end of the string, and in :data:`re.MULTILINE` mode also matches before a newline. foo matches both :code:`foo` and :code:`foobar`, while the regular expression :code:`foo$` matches only :code:`foo`. More interestingly, searching for :code:`foo.$` in :code:`foo1\nfoo2\n` matches :code:`foo2` normally, but :code:`foo1` in  :data:`re.MULTILINE` mode; searching for a single $ in :code:`foo\n` will find two (empty) matches: one just before the newline, and one at the end of the string.
-ANCHOR_END = CharRegexPattern(r"$")
+ANCHOR_END = SpecialCharRegexPattern(r"$")
 
 #: Matches Unicode whitespace characters (which includes :code:`[ \t\n\r\f\v]`, and also many other characters, for example the non-breaking spaces mandated by typography rules in many languages). If the :data:`re.ASCII` flag is used, only :code:`[ \t\n\r\f\v]` is matched.
-WHITESPACE = CharRegexPattern(r"\s")
+WHITESPACE = SpecialCharRegexPattern(r"\s")
 
 #: Matches any character which is not a whitespace character. This is the opposite of \s. If the :data:`re.ASCII` flag is used this becomes the equivalent of :code:`[^ \t\n\r\f\v]`.
-NOTWHITESPACE = CharRegexPattern(r"\S")
+NOTWHITESPACE = SpecialCharRegexPattern(r"\S")
 
 #: Matches Unicode word characters; this includes most characters that can be part of a word in any language, as well as numbers and the underscore. If the :data:`re.ASCII` flag is used, only :code:`[a-zA-Z0-9_]` is matched.
-WORD = CharRegexPattern(r"\w")
+WORD = SpecialCharRegexPattern(r"\w")
 
 #: Matches any character which is not a word character. This is the opposite of \w. If the :data:`re.ASCII` flag is used this becomes the equivalent of :code:`[^a-zA-Z0-9_]`. If the  :data:`re.LOCALE` flag is used, matches characters which are neither alphanumeric in the current locale nor the underscore.
-NOTWORD = CharRegexPattern(r"\W")
+NOTWORD = SpecialCharRegexPattern(r"\W")
 
 #: Matches any Unicode decimal digit (that is, any character in Unicode character category [Nd]). This includes :code:`[0-9]`, and also many other digit characters. If the :data:`re.ASCII` flag is used only :code:`[0-9]` is matched.
-DIGIT = CharRegexPattern(r"\d")
+DIGIT = SpecialCharRegexPattern(r"\d")
 
 #: Matches any character which is not a decimal digit. This is the opposite of \d. If the :data:`re.ASCII` flag is used this becomes the equivalent of :code:`[^0-9]`.
-NOTDIGIT = CharRegexPattern(r"\D")
+NOTDIGIT = SpecialCharRegexPattern(r"\D")
 
 
 

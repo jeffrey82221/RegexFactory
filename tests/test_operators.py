@@ -39,3 +39,10 @@ def test_match_special_chars():
         ['0', '1', '2', '3', '4']
     ) == None
 
+def test_match_single_chars():
+    assert CharRegexPattern.match_char_regex(
+        ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']
+    ) == DIGIT
+    assert CharRegexPattern.match_char_regex(
+        ['3', '4', '5', '6']
+    ) == Range('3', '6')

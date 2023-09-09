@@ -73,10 +73,16 @@ class CharRegexPattern(RegexPattern):
                     groups.append(group)
                     
         return groups
+    
+    @staticmethod
+    def match_char_regex(examples) -> Optional['CharRegexPattern']:
+        if all(map(lambda x: len(x) == 1, examples)):
+            return reduce(lambda x, y: x|y, map(CharRegexPattern, examples))
 
 class SpecialCharRegexPattern(CharRegexPattern):
     @staticmethod
-    def match_special_char_regex(examples) -> Optional['SpecialCharRegexPattern']:
+    def match_special_char_regex(examples: str) -> Optional['SpecialCharRegexPattern']:
+        assert all(map(lambda x: len(x) == 1, examples)), 'some str in examples is not single char'
         if isinstance(examples, list):
             examples = set(examples)
         for special_char in [ANY, DIGIT, WORD, WHITESPACE]:

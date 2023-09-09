@@ -7,7 +7,7 @@ More information about special characters in python regex available
 `here <https://docs.python.org/3/library/re.html#regular-expression-syntax>`__
 """
 from functools import reduce
-from typing import Optional
+from typing import Optional, List, Union
 from .pattern import RegexPattern
 from .patterns import Or
 from .utils import reduce_regex_list, find_merge_ways
@@ -24,22 +24,7 @@ class CharRegexPattern(RegexPattern):
             # check if the examples match those of the special characters
             if sp_char_regex:=SpecialCharRegexPattern.match_special_char_regex(union_examples):
                 return sp_char_regex
-            ascii_list = sorted([ord(x) for x in union_examples])
-            # seperate examples into consecutive groups
-            ascii_groups = CharRegexPattern._group_consecutive(ascii_list)
-            simple_group = [x[0] for x in ascii_groups if len(x) == 1]
-            for x in ascii_groups:
-                if len(x) == 2:
-                   simple_group.extend(x)
-            other_groups = [x for x in ascii_groups if len(x) >= 3]
-            # check if any of the groups have size > 3 and match them to Range(s)
-            # for the others match them to a Set
-            the_ranges = [Range(chr(group[0]), chr(group[-1])) for group in other_groups]
-            if simple_group:
-                the_set = Set(*[chr(ch) for ch in sorted(simple_group)])
-                regex_groups = the_ranges + [the_set]
-            else:
-                regex_groups = the_ranges
+            regex_groups = Range.match_range_regex(union_examples)
             # check if any of the combination of groups match those special characters
             mapping = find_merge_ways(regex_groups, example_inference_callable=SpecialCharRegexPattern.match_special_char_regex)
             regex_groups = reduce_regex_list(regex_groups, mapping=mapping)
@@ -75,13 +60,13 @@ class CharRegexPattern(RegexPattern):
         return groups
     
     @staticmethod
-    def match_char_regex(examples) -> Optional['CharRegexPattern']:
+    def match_char_regex(examples: List[str]) -> Optional['CharRegexPattern']:
         if all(map(lambda x: len(x) == 1, examples)):
             return reduce(lambda x, y: x|y, map(CharRegexPattern, examples))
 
 class SpecialCharRegexPattern(CharRegexPattern):
     @staticmethod
-    def match_special_char_regex(examples: str) -> Optional['SpecialCharRegexPattern']:
+    def match_special_char_regex(examples: List[str]) -> Optional['SpecialCharRegexPattern']:
         assert all(map(lambda x: len(x) == 1, examples)), 'some str in examples is not single char'
         if isinstance(examples, list):
             examples = set(examples)
@@ -146,6 +131,25 @@ class Range(CharRegexPattern):
         super().__init__(regex)
 
 
+    @staticmethod
+    def match_range_regex(examples: List[str]) -> List[Union['Range', 'Set']]:
+        ascii_list = sorted([ord(x) for x in examples])
+        # seperate examples into consecutive groups
+        ascii_groups = CharRegexPattern._group_consecutive(ascii_list)
+        simple_group = [x[0] for x in ascii_groups if len(x) == 1]
+        for x in ascii_groups:
+            if len(x) == 2:
+                simple_group.extend(x)
+        other_groups = [x for x in ascii_groups if len(x) >= 3]
+        # check if any of the groups have size > 3 and match them to Range(s)
+        # for the others match them to a Set
+        the_ranges = [Range(chr(group[0]), chr(group[-1])) for group in other_groups]
+        if simple_group:
+            the_set = Set(*[chr(ch) for ch in sorted(simple_group)])
+            regex_groups = the_ranges + [the_set]
+        else:
+            regex_groups = the_ranges
+        return regex_groups
 class Set(CharRegexPattern):
     """
     For matching a single character from a list of characters.

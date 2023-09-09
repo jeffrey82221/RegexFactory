@@ -75,7 +75,40 @@ class Or(CompositionalRegexPattern):
             return set(self._patterns) == set(other._patterns)
         return super().__eq__(other)
 
-class Amount(CompositionalRegexPattern):
+class RepeatRegexPattern(CompositionalRegexPattern):
+    def __init__(self, regex: str, pattern: ValidPatternType):
+        self._pattern = pattern
+        super().__init__(regex)
+
+class Optional(RepeatRegexPattern):
+    """
+    Matches the passed :class:`ValidPatternType` between zero and one times.
+    Functions the same as :code:`Amount(pattern, 0, 1)`.
+    """
+
+    def __init__(self, pattern: ValidPatternType, greedy: bool = True) -> None:
+        regex = Group(pattern, capturing=False) + "?" + ("" if greedy else "?")
+        super().__init__(regex, pattern)
+
+class Multi(RepeatRegexPattern):
+    """
+    Matches one or more occurences of the given :class:`ValidPatternType`.
+    If given :code:`match_zero=True` to the init method it matches zero or more occurences.
+    """
+
+    def __init__(
+        self,
+        pattern: ValidPatternType,
+        match_zero: bool = False,
+        greedy: bool = True,
+    ):
+        suffix = "*" if match_zero else "+"
+        if greedy is False:
+            suffix += "?"
+        regex = self.get_regex(Group(pattern, capturing=False))
+        super().__init__(regex + suffix, pattern)
+        
+class Amount(RepeatRegexPattern):
     """
     For matching multiple occurences of a :class:`ValidPatternType`.
     You can match a specific amount of occurences only.
@@ -126,35 +159,8 @@ class Amount(CompositionalRegexPattern):
         else:
             amount = f"{i}"
         regex = self.get_regex(pattern) + "{" + amount + "}" + ("" if greedy else "?")
-        super().__init__(regex)
-        self._pattern = pattern
+        super().__init__(regex, pattern)
 
-class Multi(CompositionalRegexPattern):
-    """
-    Matches one or more occurences of the given :class:`ValidPatternType`.
-    If given :code:`match_zero=True` to the init method it matches zero or more occurences.
-    """
 
-    def __init__(
-        self,
-        pattern: ValidPatternType,
-        match_zero: bool = False,
-        greedy: bool = True,
-    ):
-        suffix = "*" if match_zero else "+"
-        if greedy is False:
-            suffix += "?"
-        regex = self.get_regex(Group(pattern, capturing=False))
-        super().__init__(regex + suffix)
-        self._pattern = pattern
 
-class Optional(CompositionalRegexPattern):
-    """
-    Matches the passed :class:`ValidPatternType` between zero and one times.
-    Functions the same as :code:`Amount(pattern, 0, 1)`.
-    """
 
-    def __init__(self, pattern: ValidPatternType, greedy: bool = True) -> None:
-        regex = Group(pattern, capturing=False) + "?" + ("" if greedy else "?")
-        super().__init__(regex)
-        self._pattern = pattern

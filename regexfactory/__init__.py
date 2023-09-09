@@ -24,8 +24,7 @@ from .chars import (
     WORD,
 )
 from .pattern import ESCAPED_CHARACTERS, RegexPattern, ValidPatternType, escape, join
-from .patterns import (
-    Amount,
+from .extension import (
     Comment,
     Extension,
     Group,
@@ -34,10 +33,13 @@ from .patterns import (
     IfGroup,
     IfNotAhead,
     IfNotBehind,
-    Multi,
     NamedGroup,
     NamedReference,
-    NumberedReference,
+    NumberedReference
+)
+from .patterns import (
+    Amount,
+    Multi,
     Optional,
     Or
 )

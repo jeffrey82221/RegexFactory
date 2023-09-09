@@ -37,27 +37,9 @@ class CharRegexPattern(RegexPattern):
         elif isinstance(a, Or):
             if all(map(lambda x: isinstance(x, CharRegexPattern), a._patterns)):
                 union_examples = reduce(lambda x,y: x|y, map(lambda m: m.examples, a._patterns))
-                return self | Set(*list(union_examples))
-            else:
-                return Or(self, a)
-        else:
-            return Or(self, a)
+                return self | Set(*list(union_examples))    
+        return Or(self, a)
 
-    @staticmethod
-    def _group_consecutive(ascii_list):
-        groups = []
-        for i, ascii in enumerate(ascii_list):
-            if i == 0:
-                group = [ascii]
-                groups.append(group)
-            else:
-                if ascii_list[i-1] + 1 == ascii:
-                    group.append(ascii)
-                else:
-                    group = [ascii]
-                    groups.append(group)
-                    
-        return groups
     
     @staticmethod
     def match_char_regex(examples: List[str]) -> Optional['CharRegexPattern']:
@@ -135,7 +117,7 @@ class Range(CharRegexPattern):
     def match_range_regex(examples: List[str]) -> List[Union['Range', 'Set']]:
         ascii_list = sorted([ord(x) for x in examples])
         # seperate examples into consecutive groups
-        ascii_groups = CharRegexPattern._group_consecutive(ascii_list)
+        ascii_groups = Range._group_consecutive(ascii_list)
         simple_group = [x[0] for x in ascii_groups if len(x) == 1]
         for x in ascii_groups:
             if len(x) == 2:
@@ -150,6 +132,23 @@ class Range(CharRegexPattern):
         else:
             regex_groups = the_ranges
         return regex_groups
+
+    @staticmethod
+    def _group_consecutive(ascii_list):
+        groups = []
+        for i, ascii in enumerate(ascii_list):
+            if i == 0:
+                group = [ascii]
+                groups.append(group)
+            else:
+                if ascii_list[i-1] + 1 == ascii:
+                    group.append(ascii)
+                else:
+                    group = [ascii]
+                    groups.append(group)
+                    
+        return groups
+    
 class Set(CharRegexPattern):
     """
     For matching a single character from a list of characters.

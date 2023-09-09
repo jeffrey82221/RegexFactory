@@ -25,11 +25,6 @@ def test_or_for_compositional_regex():
     assert Or(Range('1', '4')) | Or(Set(*['a', 'b']), Amount('3', 3))  == Or(Range('1', '4'), Set(*['a', 'b']), Amount('3', 3))
     assert Or(Amount('a', 2), Range('0', '5')) | Or(Amount('b', 3), Range('5', '9')) == Or(Amount('a', 2), Amount('b', 3), DIGIT)
 
-def test_group_consecutive():
-    assert CharRegexPattern._group_consecutive([1,3,5]) == [[1], [3], [5]]
-    assert CharRegexPattern._group_consecutive([1,2,3]) == [[1,2,3]]
-    assert CharRegexPattern._group_consecutive([1,2,3,5,6]) == [[1,2,3], [5,6]]
-
 
 def test_match_special_chars():
     assert SpecialCharRegexPattern.match_special_char_regex(

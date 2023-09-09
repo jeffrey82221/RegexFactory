@@ -75,12 +75,12 @@ class Or(CompositionalRegexPattern):
             return set(self._patterns) == set(other._patterns)
         return super().__eq__(other)
 
-class RepeatRegexPattern(CompositionalRegexPattern):
+class OccurrenceRegexPattern(CompositionalRegexPattern):
     def __init__(self, regex: str, pattern: ValidPatternType):
         self._pattern = pattern
         super().__init__(regex)
 
-class Optional(RepeatRegexPattern):
+class Optional(OccurrenceRegexPattern):
     """
     Matches the passed :class:`ValidPatternType` between zero and one times.
     Functions the same as :code:`Amount(pattern, 0, 1)`.
@@ -90,7 +90,28 @@ class Optional(RepeatRegexPattern):
         regex = Group(pattern, capturing=False) + "?" + ("" if greedy else "?")
         super().__init__(regex, pattern)
 
-class Multi(RepeatRegexPattern):
+    def __or__(self, other: RegexPattern) -> RegexPattern:
+        if isinstance(other, Optional):
+            if self._pattern == other._pattern:
+                return self
+            else:
+                return Optional(self._pattern|other._pattern)
+        elif isinstance(other, Multi):
+            if self._pattern == other._pattern:
+                return Multi(self._pattern, match_zero=True)
+        elif isinstance(other, Amount):
+            if self._pattern == other._pattern:
+                # No gap between the occurrence count
+                if other._i <= 2:
+                    return Amount(self._pattern, 0, j=other._j, or_more=other._or_more)
+            else:
+                # When Occurrence of Amount same as Optional:
+                if other._i == 0 and other._j == 1 and not other._or_more:
+                    return Optional(self._pattern|other._pattern)
+
+        return Or(self, other)
+    
+class Multi(OccurrenceRegexPattern):
     """
     Matches one or more occurences of the given :class:`ValidPatternType`.
     If given :code:`match_zero=True` to the init method it matches zero or more occurences.
@@ -107,8 +128,43 @@ class Multi(RepeatRegexPattern):
             suffix += "?"
         regex = self.get_regex(Group(pattern, capturing=False))
         super().__init__(regex + suffix, pattern)
-        
-class Amount(RepeatRegexPattern):
+        self._match_zero = match_zero
+    
+
+    def __or__(self, other: RegexPattern) -> RegexPattern:
+        if isinstance(other, Optional):
+            return other.__or__(self)
+        elif isinstance(other, Multi):
+            if self._pattern == other._pattern:
+                return Multi(self._pattern, match_zero=(self._match_zero or other._match_zero))
+            else:
+                if other._pattern.issubset(self._pattern):
+                    return Multi(self._pattern, match_zero=(self._match_zero or other._match_zero))
+                if self._pattern.issubset(other._pattern):
+                    return Multi(other._pattern, match_zero=(self._match_zero or other._match_zero))
+        elif isinstance(other, Amount):
+            if self._pattern == other._pattern:
+                if self._match_zero:
+                    return self
+                else:
+                    if other._i == 0:
+                        return Multi(self._pattern, match_zero=True)
+                    else:
+                        return Multi(self._pattern, match_zero=False)
+            else:
+                # When the Occurrence of Amount is same with Multi
+                if other._pattern.issubset(self._pattern):
+                    if self._match_zero:
+                        return self
+                    else:
+                        if other._i >= 1:
+                            return self
+                if other.is_multi:
+                    return self.__or__(other.to_multi())
+                    
+        return Or(self, other)
+
+class Amount(OccurrenceRegexPattern):
     """
     For matching multiple occurences of a :class:`ValidPatternType`.
     You can match a specific amount of occurences only.
@@ -160,7 +216,98 @@ class Amount(RepeatRegexPattern):
             amount = f"{i}"
         regex = self.get_regex(pattern) + "{" + amount + "}" + ("" if greedy else "?")
         super().__init__(regex, pattern)
+        self._i = i
+        self._j = j
+        self._or_more = or_more
 
-
-
-
+    def __or__(self, other: RegexPattern) -> RegexPattern:
+        if isinstance(other, Optional):
+            return other.__or__(self)
+        elif isinstance(other, Multi):
+            return other.__or__(self)
+        elif isinstance(other, Amount):
+            if self._pattern == other._pattern:
+                if self._j is not None:
+                    if other._j is not None:
+                        # self (i, ..., j)
+                        # other (i, ..., j)
+                        if other._i <= self._j or self._i <= other._j:
+                            return Amount(self._pattern, min(self._i, other._i), j=max(self._j, other._j))
+                    elif other._or_more:
+                        # self (i, ... j)
+                        # other (i, ...)
+                        if other._i <= self._j:
+                            return Amount(self._pattern, min(self._i, other._i), or_more=True)
+                    else:
+                        # self: (i, ..., j)
+                        # other: (i)
+                        if self._i <= other._i and other._i <= self._j:
+                            return self
+                        
+                elif self._or_more:
+                    if other._j is not None:
+                        # self (i, ...)
+                        # other (i, ..., j)
+                        if self._i <= other._j:
+                            return Amount(self._pattern, min(self._i, other._i), or_more=True)
+                    elif other._or_more:
+                        # self (i, ...)
+                        # other (i, ...)
+                        return Amount(self._pattern, min(self._i, other._i), or_more=True)
+                    else:
+                        # self (i, ...)
+                        # other (i)
+                        if other._i >= self._i:
+                            return self
+                else:
+                    if other._j is not None:
+                        # self (i)
+                        # other (i, ..., j)
+                        if other._i <= self._i and self._i <= other._j:
+                            return other
+                    elif other._or_more:
+                        # self (i)
+                        # other (i, ...)
+                        if other._i <= self._i:
+                            return other
+                    else:
+                        # self (i)
+                        # other (i)
+                        if self._i == other._i:
+                            return self
+            elif self._i == other._i and self._j == other._j and self._or_more == other._or_more:
+                if other._pattern.issubset(self._pattern):
+                    return self
+                if self._pattern.issubset(other._pattern):
+                    return other
+                if self._is_simple and other._is_simple:
+                    return self._pattern | other._pattern
+                if self._is_optional and other._is_optional:
+                    return Optional(self._pattern | other._pattern)
+            elif (self._is_optional and other._is_simple) or (self._is_simple and other._is_optional):
+                return Optional(self._pattern | other._pattern)
+        return Or(self, other)
+    
+    @property
+    def _is_simple(self) -> bool:
+        if self._i == 1 and (self._j == None or self._j == 1) and not self._or_more:
+            return True
+        else:
+            return False
+    
+    @property
+    def _is_optional(self) -> bool:
+        if self._i == 0 and self._j == 1:
+            return True
+        else:
+            return False
+    @property 
+    def is_multi(self) -> bool:
+        if self._or_more and self._j == None:
+            if self._i == 0 or self._i == 1:
+                return True
+        return False
+    
+    def to_multi(self) -> Multi:
+        assert self.is_multi
+        return Multi(self._pattern, match_zero=(self._i==0))

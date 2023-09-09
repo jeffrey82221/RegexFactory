@@ -187,3 +187,6 @@ class RegexPattern:
         except BaseException as e:
             msg = 'Regex: ' + str(self) + ' cannot generate examples succesfully'
             raise ValueError(msg) from e
+        
+    def issubset(self, superset: 'RegexPattern') -> bool:
+        return all([superset.fullmatch(x) is not None for x in self.examples])

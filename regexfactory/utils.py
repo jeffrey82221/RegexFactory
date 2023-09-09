@@ -4,6 +4,8 @@ import itertools
 from functools import reduce
 from .pattern import RegexPattern
 
+
+
 def reduce_regex_list(regex_list: List[RegexPattern], mapping: Dict[Tuple[RegexPattern], RegexPattern]) -> List[RegexPattern]:
     _regex_list = copy.deepcopy(regex_list)
     _mapping = copy.deepcopy(mapping)

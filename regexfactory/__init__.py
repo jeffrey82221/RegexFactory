@@ -37,12 +37,14 @@ from .patterns import (
     Multi,
     NamedGroup,
     NamedReference,
-    NotSet,
     NumberedReference,
     Optional,
-    Or,
+    Or
+)
+from .chars import (
     Range,
     Set,
+    NotSet
 )
 
 __version__ = "1.0.0"

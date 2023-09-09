@@ -4,10 +4,10 @@ Base Pattern Module
 
 Module for the :class:`RegexPattern` class.
 """
-
+from typing import Set
 import re
 from typing import Any, Iterator, List, Optional, Tuple, Union
-
+import exrex
 #:
 ValidPatternType = Union[re.Pattern, str, "RegexPattern"]
 
@@ -179,3 +179,11 @@ class RegexPattern:
     ) -> Optional[re.Match]:
         """See :meth:`re.Pattern.search`."""
         return self.compile(flags=flags).search(content, pos, endpos)
+
+    @property
+    def examples(self) -> Set:
+        try:
+            return set(list(exrex.generate(str(self))))
+        except BaseException as e:
+            msg = 'Regex: ' + str(self) + ' cannot generate examples succesfully'
+            raise ValueError(msg) from e

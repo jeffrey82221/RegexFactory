@@ -175,18 +175,35 @@ G1 -> Range('a', 'z')
 
 6.2. Combine each non-consecutive groups using `Set`. 
 
-6.3. Convert Set to NotSet if its invert is a small group or range.
+6.3. Convert Set to NotSet if its invert has shorter length.
 
 # Complex Classes
 
-Or
 Amount
 Multi
 Optional
+Or
 
 ### Algorithm Design for same-class operation 
 
 #### Amount 
+
+```
+A1 = Amount(pattern1, i1, j1, or_more=b1) 
+A2 = Amount(pattern2, i2, j2, or_more=b2)
+
+if pattern1 != pattern2:
+    return Or(A1, A2)
+elif j1!=None and j2!=None:
+    if i1~j1, i2~j2 intersect:
+        i3, j3 = join/intersec(i1~j1, i2~j2)
+        return Amount(pattern1, i3, j3)
+    else:
+        return Or(A1, A2) / ''
+elif j1!=None and b2=True:
+    return Amount(pattern1, j1, or_more=True)
+```
+
 
 #### Multi 
 

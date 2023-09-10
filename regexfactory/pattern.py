@@ -37,7 +37,6 @@ class RegexPattern:
 
     def __init__(self, pattern: ValidPatternType, /) -> None:
         self.regex = self.get_regex(pattern)
-        
 
     def __repr__(self) -> str:
         raw_regex = f"{self.regex!r}".replace("\\\\", "\\")
@@ -193,10 +192,10 @@ class RegexPattern:
         except re.error as e:
             msg = 'Regex: ' + str(self) + f' cannot generate examples succesfully. type(self): {type(self)}'
             raise ValueError(msg) from e
-        
+
     def issubset(self, superset: 'RegexPattern') -> bool:
         return all([superset.fullmatch(x) is not None for x in self.examples])
-    
+
     @staticmethod
     def convert_to_regex_pattern(pattern: ValidPatternType) -> 'RegexPattern':
         if isinstance(pattern, RegexPattern):
@@ -208,7 +207,7 @@ class RegexPattern:
             assert isinstance(pattern, str)
             result = RegexPattern(pattern)
         return result
-    
+
     def __or__(self, other: 'RegexPattern') -> 'RegexPattern':
         from regexfactory import Or
         from regexfactory.chars import CharRegexPattern

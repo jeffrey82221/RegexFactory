@@ -11,10 +11,12 @@ from .utils import reduce_regex_list
 from .extension import Group
 from regexfactory.pattern import RegexPattern, ValidPatternType
 
+
 class CompositionalRegexPattern(RegexPattern):
     def __or__(self, other: RegexPattern) -> RegexPattern:
         return Or(self, other)
-    
+
+
 class Or(CompositionalRegexPattern):
     """
     For matching multiple patterns.
@@ -54,7 +56,7 @@ class Or(CompositionalRegexPattern):
             raise ValueError(msg) from e
         super().__init__((regex))
         self._patterns = set(map(RegexPattern.convert_to_regex_pattern, patterns))
-    
+
     def __or__(self, other: RegexPattern) -> RegexPattern:
         if isinstance(other, Or):
             merge_mapping = dict()
@@ -68,12 +70,12 @@ class Or(CompositionalRegexPattern):
             regex_groups = reduce_regex_list(regex_groups, mapping=merge_mapping)
             patterns = sorted(regex_groups, key=str)
             return Or(*list(set(patterns)))
-        elif type(other) == RegexPattern:
+        elif isinstance(other, RegexPattern):
             from regexfactory.chars import CharRegexPattern
             if CharRegexPattern.is_char(other.regex):
                 return CharRegexPattern(other.regex).__or__(self)
         return other.__or__(self)
-    
+
     def __eq__(self, other: t.Any) -> bool:
         """
         Returns whether or not two :class:`ValidPatternType`'s have the same regex.
@@ -82,12 +84,13 @@ class Or(CompositionalRegexPattern):
         if isinstance(other, Or):
             return set(self._patterns) == set(other._patterns)
         return super().__eq__(other)
-    
+
     def __hash__(self):
         result = hash('Or')
         for pattern in self._patterns:
             result += pattern.__hash__()
         return result
+
 
 class OccurrenceRegexPattern(CompositionalRegexPattern):
     def __init__(self, regex: str, pattern: ValidPatternType):
@@ -98,11 +101,10 @@ class OccurrenceRegexPattern(CompositionalRegexPattern):
         self._pattern = pattern
         assert isinstance(self._pattern, RegexPattern)
         super().__init__(regex)
-        
 
     def __lt__(self, other: 'OccurrenceRegexPattern') -> bool:
         assert self._pattern == other._pattern, 'pattern should be the same for < operation between two OccurrenceRegexPattern'
-        if type(self) == type(other):
+        if isinstance(self, type(other)):
             if isinstance(self, Multi):
                 if self._match_zero and not other._match_zero:
                     return True
@@ -121,15 +123,16 @@ class OccurrenceRegexPattern(CompositionalRegexPattern):
             elif isinstance(self, Multi):
                 return False
         return False
-    
+
     def __or__(self, other: Or) -> CompositionalRegexPattern:
         assert isinstance(other, Or), 'OccurrenceRegexPattern only implements __or__ for `Or` on the right.'
         patterns = set(list(other._patterns) + [self])
+
         def is_target(pattern):
             return isinstance(pattern, OccurrenceRegexPattern) and pattern._pattern == self._pattern
         target_patterns = list(filter(is_target, patterns))
-        non_target_patterns = list(patterns - set(target_patterns))        
-        reduced_pattern = reduce(lambda x,y: x|y, sorted(target_patterns))
+        non_target_patterns = list(patterns - set(target_patterns))
+        reduced_pattern = reduce(lambda x, y: x | y, sorted(target_patterns))
         if non_target_patterns:
             if isinstance(reduced_pattern, OccurrenceRegexPattern):
                 result_patterns = non_target_patterns + [reduced_pattern]
@@ -140,7 +143,6 @@ class OccurrenceRegexPattern(CompositionalRegexPattern):
             return reduced_pattern
 
 
-    
 class Optional(OccurrenceRegexPattern):
     """
     Matches the passed :class:`ValidPatternType` between zero and one times.
@@ -159,7 +161,7 @@ class Optional(OccurrenceRegexPattern):
             if self._pattern == other._pattern:
                 return self
             else:
-                return Optional(self._pattern|other._pattern)
+                return Optional(self._pattern | other._pattern)
         elif isinstance(other, Multi):
             if self._pattern == other._pattern:
                 return Multi(self._pattern, match_zero=True)
@@ -176,22 +178,23 @@ class Optional(OccurrenceRegexPattern):
                         return self
                     elif other._i == 2:
                         return Amount(self._pattern, 0, 2)
-                else: 
+                else:
                     if other._i <= 2:
                         return Multi(self._pattern, match_zero=True)
             else:
                 # When Occurrence of Amount same as Optional:
                 if other._i == 0 and other._j == 1 and not other._or_more:
-                    return Optional(self._pattern|other._pattern)
+                    return Optional(self._pattern | other._pattern)
                 elif other._i == 1 and other._j is None and not other._or_more:
-                    return Optional(self._pattern|other._pattern)
+                    return Optional(self._pattern | other._pattern)
         elif type(other) in [RegexPattern, CharRegexPattern]:
             if self._pattern == other:
                 return self
             else:
                 return Optional(self._pattern | other)
         return Or(self, other)
-    
+
+
 class Multi(OccurrenceRegexPattern):
     """
     Matches one or more occurences of the given :class:`ValidPatternType`.
@@ -210,7 +213,7 @@ class Multi(OccurrenceRegexPattern):
         regex = self.get_regex(Group(pattern, capturing=False))
         super().__init__(regex + suffix, pattern)
         self._match_zero = match_zero
-    
+
     def __or__(self, other: RegexPattern) -> RegexPattern:
         from regexfactory.chars import CharRegexPattern
         if isinstance(other, Or):
@@ -248,6 +251,7 @@ class Multi(OccurrenceRegexPattern):
             if self._pattern == other:
                 return self
         return Or(self, other)
+
 
 class Amount(OccurrenceRegexPattern):
     """
@@ -306,7 +310,7 @@ class Amount(OccurrenceRegexPattern):
         self._or_more = or_more
 
     def __or__(self, other: RegexPattern) -> RegexPattern:
-        from regexfactory.chars import CharRegexPattern        
+        from regexfactory.chars import CharRegexPattern
         if isinstance(other, Or):
             return super().__or__(other)
         elif isinstance(other, Optional):
@@ -335,7 +339,7 @@ class Amount(OccurrenceRegexPattern):
                         # other: (i)
                         if self._i <= other._i and other._i <= self._j:
                             return self
-                        
+
                 elif self._or_more:
                     if other._j is not None:
                         # self (i, ...)
@@ -401,40 +405,34 @@ class Amount(OccurrenceRegexPattern):
                 return Optional(other)
             elif self._is_simple:
                 return self._pattern | other
-        
+
         return Or(self, other)
-    """
-    if isinstance(other, Amount):
-                if isinstance(other._pattern, CharRegexPattern):
-                    other = other._pattern
-                elif isinstance(other._pattern, RegexPattern):
-                    if ex:=CharRegexPattern.match_char_regex(other.examples):
-                        other = ex
-    """
+
     @property
     def _is_simple(self) -> bool:
-        if self._i == 1 and (self._j == None or self._j == 1) and not self._or_more:
+        if self._i == 1 and (self._j is None or self._j == 1) and not self._or_more:
             return True
         else:
             return False
-    
+
     @property
     def _is_optional(self) -> bool:
         if self._i == 0 and self._j == 1:
             return True
         else:
             return False
-    @property 
+
+    @property
     def is_multi(self) -> bool:
-        if self._or_more and self._j == None:
+        if self._or_more and self._j is None:
             if self._i == 0 or self._i == 1:
                 return True
         return False
-    
+
     def to_multi(self) -> Multi:
         assert self.is_multi
-        return Multi(self._pattern, match_zero=(self._i==0))
-    
+        return Multi(self._pattern, match_zero=(self._i == 0))
+
     @property
     def _is_empty(self) -> bool:
         return self._i == 0 and self._j is None and not self._or_more

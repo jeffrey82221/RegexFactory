@@ -7,12 +7,14 @@ from strategies import build_bounds, optional_step
 import re
 from regexfactory import Amount, ValidPatternType
 
+
 def is_regex(text):
     try:
         re.compile(text)
         return True
-    except:
+    except BaseException:
         return False
+
 
 def build_amount(
     pattern: ValidPatternType,
@@ -43,7 +45,7 @@ def test_amount_single_count(word, count):
     """
     actual = Amount(word, i=count, or_more=False)
     assert actual.regex == "{word}{{{count}}}".format(word=word, count=str(count))
-    
+
 
 @pytest.mark.patterns
 @given(

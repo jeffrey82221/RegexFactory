@@ -14,17 +14,19 @@ from .utils import reduce_regex_list, find_merge_ways
 from regexfactory.pattern import RegexPattern, ValidPatternType
 import exrex
 
+
 class CharRegexPattern(RegexPattern):
     """
     Char-level Regex Pattern
     """
+
     def __or__(self, other: RegexPattern) -> 'CharRegexPattern':
         if self == other:
             return self
         elif isinstance(other, CharRegexPattern):
             union_examples = set.union(self.examples, other.examples)
             # check if the examples match those of the special characters
-            if sp_char_regex:=SpecialCharRegexPattern.match_special_char_regex(union_examples):
+            if sp_char_regex := SpecialCharRegexPattern.match_special_char_regex(union_examples):
                 return sp_char_regex
             regex_groups = Range.match_range_regex(union_examples)
             # check if any of the combination of groups match those special characters
@@ -38,7 +40,7 @@ class CharRegexPattern(RegexPattern):
                 return Set(*sorted(list(union_examples)))
         elif isinstance(other, Or):
             if all(map(lambda x: isinstance(x, CharRegexPattern), other._patterns)):
-                union_examples = reduce(lambda x,y: x|y, map(lambda m: m.examples, other._patterns))
+                union_examples = reduce(lambda x, y: x | y, map(lambda m: m.examples, other._patterns))
                 return self | Set(*list(union_examples))
         elif isinstance(other, OccurrenceRegexPattern):
             return other.__or__(self)
@@ -46,14 +48,15 @@ class CharRegexPattern(RegexPattern):
             if CharRegexPattern.is_char(other.regex):
                 return self | CharRegexPattern(other.regex)
         return Or(self, other)
-    
+
     @staticmethod
     def is_char(regex):
         for ch in exrex.generate(regex):
             if len(ch) > 1:
                 return False
         return True
-    
+
+
 class SpecialCharRegexPattern(CharRegexPattern):
     @staticmethod
     def match_special_char_regex(examples: List[str]) -> Optional['SpecialCharRegexPattern']:
@@ -64,6 +67,8 @@ class SpecialCharRegexPattern(CharRegexPattern):
         for special_char in [ANY, DIGIT, WORD, WHITESPACE]:
             if examples == special_char.examples:
                 return special_char
+
+
 #: (Dot.) In the default mode, this matches any character except a newline. If the :data:`re.DOTALL` flag has been specified, this matches any character including a newline.
 ANY = SpecialCharRegexPattern(r".")
 
@@ -90,7 +95,6 @@ DIGIT = SpecialCharRegexPattern(r"\d")
 
 #: Matches any character which is not a decimal digit. This is the opposite of \d. If the :data:`re.ASCII` flag is used this becomes the equivalent of :code:`[^0-9]`.
 NOTDIGIT = SpecialCharRegexPattern(r"\D")
-
 
 
 class Range(CharRegexPattern):
@@ -121,7 +125,6 @@ class Range(CharRegexPattern):
         regex = f"[{start}-{stop}]"
         super().__init__(regex)
 
-
     @staticmethod
     def match_range_regex(examples: List[str]) -> List[Union['Range', 'Set']]:
         ascii_list = sorted([ord(x) for x in examples])
@@ -150,14 +153,15 @@ class Range(CharRegexPattern):
                 group = [ascii]
                 groups.append(group)
             else:
-                if ascii_list[i-1] + 1 == ascii:
+                if ascii_list[i - 1] + 1 == ascii:
                     group.append(ascii)
                 else:
                     group = [ascii]
                     groups.append(group)
-                    
+
         return groups
-    
+
+
 class Set(CharRegexPattern):
     """
     For matching a single character from a list of characters.

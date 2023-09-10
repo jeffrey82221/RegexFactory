@@ -11,13 +11,13 @@
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #
 
+from regexfactory import __version__
 import os
 import sys
 
 sys.path.insert(0, os.path.abspath("../"))
 sys.path.append(os.path.abspath("extensions"))
 
-from regexfactory import __version__
 
 # -- Project information -----------------------------------------------------
 project = "RegexFactory"

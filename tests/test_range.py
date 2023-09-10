@@ -24,7 +24,8 @@ def test_range_parameters(start, stop, expected):
     actual = Range(start=start, stop=stop)
     assert actual.regex == expected
 
+
 def test_group_consecutive():
-    assert Range._group_consecutive([1,3,5]) == [[1], [3], [5]]
-    assert Range._group_consecutive([1,2,3]) == [[1,2,3]]
-    assert Range._group_consecutive([1,2,3,5,6]) == [[1,2,3], [5,6]]
+    assert Range._group_consecutive([1, 3, 5]) == [[1], [3], [5]]
+    assert Range._group_consecutive([1, 2, 3]) == [[1, 2, 3]]
+    assert Range._group_consecutive([1, 2, 3, 5, 6]) == [[1, 2, 3], [5, 6]]

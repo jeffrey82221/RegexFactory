@@ -7,9 +7,9 @@ from regexfactory import (
     ANCHOR_START,
     ANY,
     DIGIT,
-    NOTDIGIT, # not working 
-    NOTWHITESPACE, # not working 
-    NOTWORD, # not working 
+    NOTDIGIT,  # not working
+    NOTWHITESPACE,  # not working
+    NOTWORD,  # not working
     WHITESPACE,
     WORD,
 )
@@ -23,7 +23,7 @@ from regexfactory import (
     IfGroup,
     IfNotAhead,
     IfNotBehind,
-    Multi, 
+    Multi,
     NamedGroup,
     NamedReference,
     NumberedReference,

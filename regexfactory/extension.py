@@ -5,6 +5,7 @@ Advance Regex Pattern Subclasses
 import typing as t
 from regexfactory.pattern import RegexPattern, ValidPatternType
 
+
 class Extension(RegexPattern):
     """Base class for extension pattern classes."""
 

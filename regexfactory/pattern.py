@@ -208,7 +208,7 @@ class RegexPattern:
             assert isinstance(pattern, str)
             result = RegexPattern(pattern)
         return result
-        
+    
     def __or__(self, other: 'RegexPattern') -> 'RegexPattern':
         from regexfactory import Or
         from regexfactory.chars import CharRegexPattern

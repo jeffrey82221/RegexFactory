@@ -70,8 +70,8 @@ class Or(CompositionalRegexPattern):
             return Or(*list(set(patterns)))
         elif type(other) == RegexPattern:
             from regexfactory.chars import CharRegexPattern
-            if ex:=CharRegexPattern.match_char_regex(other.examples):
-                return ex.__or__(self)
+            if CharRegexPattern.is_char(other.regex):
+                return CharRegexPattern(other.regex).__or__(self)
         return other.__or__(self)
     
     def __eq__(self, other: t.Any) -> bool:
@@ -93,17 +93,8 @@ class OccurrenceRegexPattern(CompositionalRegexPattern):
     def __init__(self, regex: str, pattern: ValidPatternType):
         pattern = RegexPattern.convert_to_regex_pattern(pattern)
         from regexfactory.chars import CharRegexPattern
-        try:
-            examples = pattern.examples
-        except BaseException as e:
-            raise ValueError(f'error getting examples for pattern {pattern} of type {type(pattern)}') from e
-        try:
-            if ex:=CharRegexPattern.match_char_regex(examples):
-                pattern = ex
-        except BaseException as e:
-            raise ValueError(f'error match_char_regex for examples: {examples}') from e
-
-        
+        if CharRegexPattern.is_char(pattern.regex):
+            pattern = CharRegexPattern(pattern.regex)
         self._pattern = pattern
         assert isinstance(self._pattern, RegexPattern)
         super().__init__(regex)

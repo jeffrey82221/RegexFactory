@@ -13,7 +13,6 @@ from .patterns import Or, OccurrenceRegexPattern
 from .utils import reduce_regex_list, find_merge_ways
 from regexfactory.pattern import RegexPattern, ValidPatternType
 import exrex
-import re
 
 class CharRegexPattern(RegexPattern):
     """
@@ -44,33 +43,17 @@ class CharRegexPattern(RegexPattern):
         elif isinstance(other, OccurrenceRegexPattern):
             return other.__or__(self)
         elif isinstance(other, RegexPattern):
-            if ex:= CharRegexPattern.match_char_regex(other.examples):
-                return self | ex
+            if CharRegexPattern.is_char(other.regex):
+                return self | CharRegexPattern(other.regex)
         return Or(self, other)
-
     
     @staticmethod
-    def match_char_regex(examples: List[str]) -> Optional['CharRegexPattern']:
-        if all(map(lambda x: len(x) == 1, examples)):
-            return reduce(lambda x, y: x|y, map(lambda x: CharRegexPattern(x), examples))
+    def is_char(regex):
+        for ch in exrex.generate(regex):
+            if len(ch) > 1:
+                return False
+        return True
     
-    @staticmethod
-    def convert_to_char_regex(pattern: ValidPatternType) -> 'CharRegexPattern':
-        if isinstance(pattern, CharRegexPattern):
-            return pattern
-        elif isinstance(pattern, RegexPattern):
-            char_regex = CharRegexPattern.match_char_regex(pattern.examples)
-            assert char_regex is not None
-            return char_regex
-        else:
-            if isinstance(pattern, re.Pattern):
-                pattern = pattern.pattern
-            examples = set(list(exrex.generate(str(pattern))))
-            char_regex = CharRegexPattern.match_char_regex(examples)
-            assert char_regex is not None
-            return char_regex
-                
-
 class SpecialCharRegexPattern(CharRegexPattern):
     @staticmethod
     def match_special_char_regex(examples: List[str]) -> Optional['SpecialCharRegexPattern']:

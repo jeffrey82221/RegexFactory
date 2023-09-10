@@ -11,21 +11,9 @@ def test_match_special_chars():
         ['0', '1', '2', '3', '4']
     ) == None
 
-def test_match_single_chars():
-    assert CharRegexPattern.match_char_regex(
-        ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']
-    ) == DIGIT
-    assert CharRegexPattern.match_char_regex(
-        ['3', '4', '5', '6']
-    ) == Range('3', '6')
-def test_convert_to_char_regex():
-    assert CharRegexPattern.convert_to_char_regex('1') == CharRegexPattern('1')
-    assert CharRegexPattern.convert_to_char_regex(re.compile('1')) == CharRegexPattern('1')
-    assert CharRegexPattern.convert_to_char_regex(CharRegexPattern('1')) == CharRegexPattern('1')
-    assert CharRegexPattern.convert_to_char_regex(RegexPattern('1')) == CharRegexPattern('1')
-    with pytest.raises(AssertionError):
-        CharRegexPattern.convert_to_char_regex(RegexPattern('12'))
-    with pytest.raises(AssertionError):
-        CharRegexPattern.convert_to_char_regex('12')
-    with pytest.raises(AssertionError):
-        CharRegexPattern.convert_to_char_regex(Amount('a', 2))
+def test_is_chars():
+    assert CharRegexPattern.is_char(DIGIT.regex)
+    assert CharRegexPattern.is_char(Amount('a', 1).regex)
+    assert CharRegexPattern.is_char(RegexPattern('\w').regex)
+    assert CharRegexPattern.is_char(ANY.regex)
+    assert CharRegexPattern.is_char(Range('1', '3').regex)

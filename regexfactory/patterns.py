@@ -218,6 +218,7 @@ class Multi(OccurrenceRegexPattern):
         self._match_zero = match_zero
     
     def __or__(self, other: RegexPattern) -> RegexPattern:
+        from regexfactory.chars import CharRegexPattern
         if isinstance(other, Or):
             return super().__or__(other)
         elif isinstance(other, Optional):
@@ -249,6 +250,9 @@ class Multi(OccurrenceRegexPattern):
                             return self
                 if other.is_multi:
                     return self.__or__(other.to_multi())
+        elif type(other) in [RegexPattern, CharRegexPattern]:
+            if self._pattern == other:
+                return self
         return Or(self, other)
 
 class Amount(OccurrenceRegexPattern):
@@ -311,8 +315,6 @@ class Amount(OccurrenceRegexPattern):
         from regexfactory.chars import CharRegexPattern        
         if isinstance(other, Or):
             return super().__or__(other)
-        elif isinstance(other, CharRegexPattern):
-            return other.__or__(self)
         elif isinstance(other, Optional):
             return other.__or__(self)
         elif isinstance(other, Multi):
@@ -393,14 +395,28 @@ class Amount(OccurrenceRegexPattern):
                     return Optional(self._pattern | other._pattern)
             elif (self._is_optional and other._is_simple) or (self._is_simple and other._is_optional):
                 return Optional(self._pattern | other._pattern)
-        elif isinstance(other, RegexPattern):
-            if self._is_simple and self._pattern == other:
-                return other
-            elif not self._is_simple and self._pattern == other:
-                return self | Amount(other, 1)
+        elif isinstance(other, RegexPattern) or isinstance(other, CharRegexPattern):
+            if self._pattern == other:
+                if self._is_simple:
+                    return other
+                elif self._is_empty:
+                    return Optional(other)
+                else:
+                    return self | Amount(other, 1)
+            elif self._is_empty:
+                return Optional(other)
+            elif self._is_simple:
+                return self._pattern | other
         
         return Or(self, other)
-    
+    """
+    if isinstance(other, Amount):
+                if isinstance(other._pattern, CharRegexPattern):
+                    other = other._pattern
+                elif isinstance(other._pattern, RegexPattern):
+                    if ex:=CharRegexPattern.match_char_regex(other.examples):
+                        other = ex
+    """
     @property
     def _is_simple(self) -> bool:
         if self._i == 1 and (self._j == None or self._j == 1) and not self._or_more:
@@ -424,3 +440,7 @@ class Amount(OccurrenceRegexPattern):
     def to_multi(self) -> Multi:
         assert self.is_multi
         return Multi(self._pattern, match_zero=(self._i==0))
+    
+    @property
+    def _is_empty(self) -> bool:
+        return self._i == 0 and self._j is None and not self._or_more

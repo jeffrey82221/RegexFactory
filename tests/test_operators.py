@@ -10,7 +10,6 @@ from regexfactory import RegexPattern
 def test_or_for_char_regex():
     assert Range('0', '4') | Range('3', '9') == DIGIT
     assert (Set('1') | Set('2')).regex == '[12]'
-    assert (Range('0', '4') | Amount('2', 1, 2)).regex == Or(Range('0', '4'), Amount('2', 1, 2))
     assert Range('0', '5') | WORD == WORD
     assert DIGIT | WORD == WORD
     assert Range('0', '4') | Range('7', '9') == Or(Range('0', '4'), Range('7', '9'))
@@ -25,6 +24,7 @@ def test_or_for_char_regex():
     assert Amount('1', 1) | CharRegexPattern('2') == Set(*'12')
     assert Amount('1', 1) | CharRegexPattern('2') | RegexPattern('3') == Range('1', '3')
     assert Range('0', '3') | Range('5', '9') | CharRegexPattern('4') == DIGIT
+    assert Range('0', '4') | Amount('2', 1, 2) == Or(Range('0', '4'), Amount('2', 1, 2))
 
 def test_or_for_compositional_regex():
     assert Or(Range('1', '4'), Set(*['a', 'b'])) | Set(*['a', 'b']) == Or(Range('1', '4'), Set(*['a', 'b']))
@@ -70,8 +70,19 @@ def test_or_for_compositional_regex():
     assert Optional('a') | RegexPattern('a') == Optional('a')
     assert Optional('a') | CharRegexPattern('b') == Optional(Set(*'ab'))
     assert Amount('a', 1, 2) | RegexPattern('a') == Amount('a', 1, 2)
+    assert Amount('a', 1) | CharRegexPattern('a') == RegexPattern('a')
+    assert RegexPattern('a') | Amount('a', 1) == CharRegexPattern('a')
+    assert Amount('a', 0) | RegexPattern('a') == Optional('a')
+    assert RegexPattern('a') | Amount('a', 0) == Optional('a')
+    assert Amount('a', 0) | RegexPattern('b') == Optional('b')
+    assert RegexPattern('b') | Amount('a', 0) == Optional('b')
+    assert Amount('a', 0) | CharRegexPattern('a') == Optional('a')
+    assert CharRegexPattern('a') | Amount('a', 0) == Optional('a')
     assert Optional('a') | Optional('ab') == Optional(Or('a', 'ab'))
-
+    assert Multi('a') | CharRegexPattern('a') == Multi('a')
+    assert CharRegexPattern('a') | Multi('a') == Multi('a')
+    assert RegexPattern('a') | Multi('a') == Multi('a')
+    assert Multi('a') | RegexPattern('a') == Multi('a')
     
 
 def test_or_for_simple_cases():

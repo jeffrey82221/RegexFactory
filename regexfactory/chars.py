@@ -9,7 +9,7 @@ More information about special characters in python regex available
 from functools import reduce
 from typing import Optional, List, Union
 from .pattern import RegexPattern
-from .patterns import Or, Amount, CompositionalRegexPattern
+from .patterns import Or, Amount, CompositionalRegexPattern, OccurrenceRegexPattern
 from .utils import reduce_regex_list, find_merge_ways
 from regexfactory.pattern import RegexPattern, ValidPatternType
 import exrex
@@ -22,19 +22,7 @@ class CharRegexPattern(RegexPattern):
     def __or__(self, other: RegexPattern) -> 'CharRegexPattern':
         if self == other:
             return self
-        elif isinstance(other, CharRegexPattern) or (isinstance(other, Amount) and other._is_simple):
-            if isinstance(other, Amount):
-                if isinstance(other._pattern, CharRegexPattern):
-                    other = other._pattern
-                elif isinstance(other._pattern, RegexPattern):
-                    if ex:=CharRegexPattern.match_char_regex(other.examples):
-                        other = ex
-                    else:
-                        return Or(self, other)
-                else:
-                    return Or(self, other)
-            if self == other:
-                return self
+        elif isinstance(other, CharRegexPattern):
             union_examples = set.union(self.examples, other.examples)
             # check if the examples match those of the special characters
             if sp_char_regex:=SpecialCharRegexPattern.match_special_char_regex(union_examples):
@@ -53,10 +41,11 @@ class CharRegexPattern(RegexPattern):
             if all(map(lambda x: isinstance(x, CharRegexPattern), other._patterns)):
                 union_examples = reduce(lambda x,y: x|y, map(lambda m: m.examples, other._patterns))
                 return self | Set(*list(union_examples))
-        elif isinstance(other, RegexPattern) and not isinstance(other, CompositionalRegexPattern):
+        elif isinstance(other, OccurrenceRegexPattern):
+            return other.__or__(self)
+        elif isinstance(other, RegexPattern):
             if ex:= CharRegexPattern.match_char_regex(other.examples):
                 return self | ex
-            
         return Or(self, other)
 
     

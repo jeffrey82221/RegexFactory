@@ -68,8 +68,11 @@ class Or(CompositionalRegexPattern):
             regex_groups = reduce_regex_list(regex_groups, mapping=merge_mapping)
             patterns = sorted(regex_groups, key=str)
             return Or(*list(set(patterns)))
-        else:
-            return other.__or__(self)
+        elif type(other) == RegexPattern:
+            from regexfactory.chars import CharRegexPattern
+            if ex:=CharRegexPattern.match_char_regex(other.examples):
+                return ex.__or__(self)
+        return other.__or__(self)
     
     def __eq__(self, other: t.Any) -> bool:
         """

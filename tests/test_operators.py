@@ -25,7 +25,9 @@ def test_or_for_char_regex():
     assert Amount('1', 1) | CharRegexPattern('2') | RegexPattern('3') == Range('1', '3')
     assert Range('0', '3') | Range('5', '9') | CharRegexPattern('4') == DIGIT
     assert Range('0', '4') | Amount('2', 1, 2) == Or(Range('0', '4'), Amount('2', 1, 2))
-
+    assert Amount('1', 1) | RegexPattern('2') | RegexPattern('3') == Range('1', '3')
+    assert Range('0', '3') | Range('5', '9') | RegexPattern('4') == DIGIT
+    
 def test_or_for_compositional_regex():
     assert Or(Range('1', '4'), Set(*['a', 'b'])) | Set(*['a', 'b']) == Or(Range('1', '4'), Set(*['a', 'b']))
     assert Or(Amount('a', 2), Amount('b', 4)).__or__(Or(Amount('b', 4), Amount('c', 3)))  == Or(Amount('a', 2), Amount('b', 4), Amount('c', 3))
@@ -90,6 +92,7 @@ def test_or_for_simple_cases():
     assert RegexPattern('123') | RegexPattern('456') == Or(RegexPattern('123'), RegexPattern('456'))
     assert RegexPattern('1') | CharRegexPattern('1') == CharRegexPattern('1')
     assert RegexPattern('1') | CharRegexPattern('3') == Set(*'13')
+    assert RegexPattern('1') | Range('2', '3') == Range('1', '3')
 
 def test_lt_operator():
     assert Optional('a') < Amount('a', 1)

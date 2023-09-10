@@ -9,7 +9,7 @@ More information about special characters in python regex available
 from functools import reduce
 from typing import Optional, List, Union
 from .pattern import RegexPattern
-from .patterns import Or, Amount, CompositionalRegexPattern, OccurrenceRegexPattern
+from .patterns import Or, OccurrenceRegexPattern
 from .utils import reduce_regex_list, find_merge_ways
 from regexfactory.pattern import RegexPattern, ValidPatternType
 import exrex

@@ -61,6 +61,18 @@ def test_or_for_compositional_regex():
     assert sorted([Optional('a'), Amount('a', 5, or_more=True), Amount('a', 1, 5) ]) == [Optional('a'), Amount('a', 1, 5), Amount('a', 5, or_more=True)]
     assert Optional('a') | Amount('a', 5, or_more=True) | Amount('a', 1, 5) == Multi('a', match_zero=True)
     assert Optional('a') | Amount('a', 5, or_more=True) | Amount('b', 1, 5) == Or(Optional('a'), Amount('a', 5, or_more=True), Amount('b', 1, 5))
+    assert Optional(CharRegexPattern('a')) | Optional(CharRegexPattern('b')) == Optional(Set(*'ab'))
+    assert Optional('a') | Optional('b') == Optional(Set(*'ab'))
+    assert Optional(RegexPattern('a')) | Optional(RegexPattern('b')) == Optional(Set(*'ab'))
+    assert Amount('a', 1, 2) | RegexPattern('a') == Amount('a', 1, 2)
+    assert Optional('a') | Amount('b', 1) == Optional(Set(*'ab'))
+    assert Optional('a') | CharRegexPattern('a') == Optional('a')
+    assert Optional('a') | RegexPattern('a') == Optional('a')
+    assert Optional('a') | CharRegexPattern('b') == Optional(Set(*'ab'))
+    assert Amount('a', 1, 2) | RegexPattern('a') == Amount('a', 1, 2)
+    assert Optional('a') | Optional('ab') == Optional(Or('a', 'ab'))
+
+    
 
 def test_or_for_simple_cases():
     assert RegexPattern('123') | RegexPattern('123') == RegexPattern('123')

@@ -36,18 +36,22 @@ class Or(CompositionalRegexPattern):
         self,
         *patterns: ValidPatternType,
     ) -> None:
-        regex = "|".join(
-            map(
-                self.get_regex,
-                (
-                    Group(
-                        pattern,
-                        capturing=False,
-                    )
-                    for pattern in patterns
-                ),
+        try:
+            regex = "|".join(
+                map(
+                    self.get_regex,
+                    (
+                        Group(
+                            pattern,
+                            capturing=False,
+                        )
+                        for pattern in patterns
+                    ),
+                )
             )
-        )
+        except BaseException as e:
+            msg = f'input: {patterns}'
+            raise ValueError(msg) from e
         super().__init__((regex))
         self._patterns = set(map(RegexPattern.convert_to_regex_pattern, patterns))
     
@@ -84,8 +88,23 @@ class Or(CompositionalRegexPattern):
 
 class OccurrenceRegexPattern(CompositionalRegexPattern):
     def __init__(self, regex: str, pattern: ValidPatternType):
-        self._pattern = RegexPattern.convert_to_regex_pattern(pattern)
+        pattern = RegexPattern.convert_to_regex_pattern(pattern)
+        from regexfactory.chars import CharRegexPattern
+        try:
+            examples = pattern.examples
+        except BaseException as e:
+            raise ValueError(f'error getting examples for pattern {pattern} of type {type(pattern)}') from e
+        try:
+            if ex:=CharRegexPattern.match_char_regex(examples):
+                pattern = ex
+        except BaseException as e:
+            raise ValueError(f'error match_char_regex for examples: {examples}') from e
+
+        
+        self._pattern = pattern
+        assert isinstance(self._pattern, RegexPattern)
         super().__init__(regex)
+        
 
     def __lt__(self, other: 'OccurrenceRegexPattern') -> bool:
         assert self._pattern == other._pattern, 'pattern should be the same for < operation between two OccurrenceRegexPattern'
@@ -139,6 +158,7 @@ class Optional(OccurrenceRegexPattern):
         super().__init__(regex, pattern)
 
     def __or__(self, other: RegexPattern) -> RegexPattern:
+        from regexfactory.chars import CharRegexPattern
         if isinstance(other, Or):
             return super().__or__(other)
         elif isinstance(other, Optional):
@@ -169,7 +189,13 @@ class Optional(OccurrenceRegexPattern):
                 # When Occurrence of Amount same as Optional:
                 if other._i == 0 and other._j == 1 and not other._or_more:
                     return Optional(self._pattern|other._pattern)
-
+                elif other._i == 1 and other._j is None and not other._or_more:
+                    return Optional(self._pattern|other._pattern)
+        elif type(other) in [RegexPattern, CharRegexPattern]:
+            if self._pattern == other:
+                return self
+            else:
+                return Optional(self._pattern | other)
         return Or(self, other)
     
 class Multi(OccurrenceRegexPattern):
@@ -370,6 +396,8 @@ class Amount(OccurrenceRegexPattern):
         elif isinstance(other, RegexPattern):
             if self._is_simple and self._pattern == other:
                 return other
+            elif not self._is_simple and self._pattern == other:
+                return self | Amount(other, 1)
         
         return Or(self, other)
     

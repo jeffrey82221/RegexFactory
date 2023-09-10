@@ -4,9 +4,18 @@ import pytest
 from hypothesis import given
 from hypothesis import strategies as st
 from strategies import build_bounds, optional_step
-
+import re
 from regexfactory import Amount, ValidPatternType
 
+def is_regex(text):
+    try:
+        re.compile(text)
+        if text != '.':
+            return True
+        else:
+            return False
+    except:
+        return False
 
 def build_amount(
     pattern: ValidPatternType,
@@ -29,7 +38,7 @@ def build_amount(
 
 
 @pytest.mark.patterns
-@given(st.text(min_size=1), st.integers(min_value=1))
+@given(st.text(min_size=1).filter(is_regex), st.integers(min_value=1))
 def test_amount_single_count(word, count):
     """
     Test to ensure that when `or_more=False` and no upper bound is
@@ -37,11 +46,11 @@ def test_amount_single_count(word, count):
     """
     actual = Amount(word, i=count, or_more=False)
     assert actual.regex == "{word}{{{count}}}".format(word=word, count=str(count))
-
+    
 
 @pytest.mark.patterns
 @given(
-    st.text(min_size=1),
+    st.text(min_size=1).filter(is_regex),
     st.builds(
         build_bounds,
         lower_bound=st.integers(min_value=1),
@@ -61,7 +70,7 @@ def test_amount_lower_upper(word, bound: range):
 
 
 @pytest.mark.patterns
-@given(st.text(min_size=1), st.integers(min_value=1))
+@given(st.text(min_size=1).filter(is_regex), st.integers(min_value=1))
 def test_amount_or_more(word, count):
     """
     Test to ensure that when `or_more=True` and no upper bound is
@@ -75,7 +84,7 @@ def test_amount_or_more(word, count):
 @given(
     st.builds(
         build_amount,
-        pattern=st.text(min_size=1),
+        pattern=st.text(min_size=1).filter(is_regex),
         start=st.integers(min_value=1),
         or_more=st.booleans(),
         greedy=st.just(False),

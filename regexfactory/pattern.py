@@ -37,6 +37,7 @@ class RegexPattern:
 
     def __init__(self, pattern: ValidPatternType, /) -> None:
         self.regex = self.get_regex(pattern)
+        
 
     def __repr__(self) -> str:
         raw_regex = f"{self.regex!r}".replace("\\\\", "\\")
@@ -88,7 +89,7 @@ class RegexPattern:
             return obj
         if isinstance(obj, re.Pattern):
             return obj.pattern
-        raise TypeError(f"Can't get regex from {obj.__class__.__qualname__} object.")
+        raise TypeError(f"Can't get regex from {obj.__class__.__qualname__} for object {obj}.")
 
     def compile(
         self,
@@ -189,8 +190,8 @@ class RegexPattern:
     def examples(self) -> Set:
         try:
             return set(list(exrex.generate(str(self))))
-        except BaseException as e:
-            msg = 'Regex: ' + str(self) + ' cannot generate examples succesfully'
+        except re.error as e:
+            msg = 'Regex: ' + str(self) + f' cannot generate examples succesfully. type(self): {type(self)}'
             raise ValueError(msg) from e
         
     def issubset(self, superset: 'RegexPattern') -> bool:
@@ -199,11 +200,14 @@ class RegexPattern:
     @staticmethod
     def convert_to_regex_pattern(pattern: ValidPatternType) -> 'RegexPattern':
         if isinstance(pattern, RegexPattern):
-            return pattern
+            result = pattern
         else:
+            # get pattern in term of str
             if isinstance(pattern, re.Pattern):
                 pattern = pattern.pattern
-            return RegexPattern(pattern)
+            assert isinstance(pattern, str)
+            result = RegexPattern(pattern)
+        return result
         
     def __or__(self, other: 'RegexPattern') -> 'RegexPattern':
         from regexfactory import Or

@@ -1,6 +1,6 @@
 from regexfactory import Set, NotSet, Range, Or
 from regexfactory import ANY, WHITESPACE, NOTWHITESPACE, WORD, NOTWORD, DIGIT
-
+from regexfactory import RegexPattern
 
 from regexfactory import (
     ANCHOR_END,
@@ -47,3 +47,4 @@ def test_examples():
     assert Or(DIGIT, Amount('a', 1, 3)).examples == DIGIT.examples | Amount('a', 1, 3).examples
     assert Optional('a').examples == set(['', 'a'])
     assert Comment('hello').examples == {''}
+    assert RegexPattern('.').examples == ANY.examples

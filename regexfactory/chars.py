@@ -54,15 +54,16 @@ class CharRegexPattern(RegexPattern):
                 union_examples = reduce(lambda x,y: x|y, map(lambda m: m.examples, other._patterns))
                 return self | Set(*list(union_examples))
         elif isinstance(other, RegexPattern) and not isinstance(other, CompositionalRegexPattern):
-            if other:= CharRegexPattern.match_char_regex(other.examples):
-                return self | other
+            if ex:= CharRegexPattern.match_char_regex(other.examples):
+                return self | ex
+            
         return Or(self, other)
 
     
     @staticmethod
     def match_char_regex(examples: List[str]) -> Optional['CharRegexPattern']:
         if all(map(lambda x: len(x) == 1, examples)):
-            return reduce(lambda x, y: x|y, map(CharRegexPattern, examples))
+            return reduce(lambda x, y: x|y, map(lambda x: CharRegexPattern(x), examples))
     
     @staticmethod
     def convert_to_char_regex(pattern: ValidPatternType) -> 'CharRegexPattern':
@@ -84,7 +85,8 @@ class CharRegexPattern(RegexPattern):
 class SpecialCharRegexPattern(CharRegexPattern):
     @staticmethod
     def match_special_char_regex(examples: List[str]) -> Optional['SpecialCharRegexPattern']:
-        assert all(map(lambda x: len(x) == 1, examples)), 'some str in examples is not single char'
+        long_chars = list(filter(lambda x: len(x) != 1, examples))
+        assert len(long_chars) == 0, f'some str in examples is not single char: {long_chars}'
         if isinstance(examples, list):
             examples = set(examples)
         for special_char in [ANY, DIGIT, WORD, WHITESPACE]:

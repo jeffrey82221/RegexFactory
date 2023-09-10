@@ -1,7 +1,7 @@
 import pytest
 from regexfactory import RegexPattern, Amount
 from regexfactory.chars import CharRegexPattern, SpecialCharRegexPattern
-from regexfactory import DIGIT, Range
+from regexfactory import DIGIT, Range, ANY
 import re
 def test_match_special_chars():
     assert SpecialCharRegexPattern.match_special_char_regex(
@@ -18,7 +18,6 @@ def test_match_single_chars():
     assert CharRegexPattern.match_char_regex(
         ['3', '4', '5', '6']
     ) == Range('3', '6')
-
 def test_convert_to_char_regex():
     assert CharRegexPattern.convert_to_char_regex('1') == CharRegexPattern('1')
     assert CharRegexPattern.convert_to_char_regex(re.compile('1')) == CharRegexPattern('1')

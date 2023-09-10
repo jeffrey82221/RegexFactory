@@ -10,10 +10,7 @@ from regexfactory import Amount, ValidPatternType
 def is_regex(text):
     try:
         re.compile(text)
-        if text != '.':
-            return True
-        else:
-            return False
+        return True
     except:
         return False
 

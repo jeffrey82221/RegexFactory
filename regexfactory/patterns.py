@@ -48,7 +48,7 @@ class Or(CompositionalRegexPattern):
             )
         )
         super().__init__((regex))
-        self._patterns = set(patterns)
+        self._patterns = set(map(RegexPattern.convert_to_regex_pattern, patterns))
     
     def __or__(self, other: RegexPattern) -> RegexPattern:
         if isinstance(other, Or):
@@ -77,7 +77,7 @@ class Or(CompositionalRegexPattern):
 
 class OccurrenceRegexPattern(CompositionalRegexPattern):
     def __init__(self, regex: str, pattern: ValidPatternType):
-        self._pattern = pattern
+        self._pattern = RegexPattern.convert_to_regex_pattern(pattern)
         super().__init__(regex)
 
 class Optional(OccurrenceRegexPattern):
@@ -221,7 +221,10 @@ class Amount(OccurrenceRegexPattern):
         self._or_more = or_more
 
     def __or__(self, other: RegexPattern) -> RegexPattern:
-        if isinstance(other, Optional):
+        from regexfactory.chars import CharRegexPattern
+        if isinstance(other, CharRegexPattern):
+            return other.__or__(self)
+        elif isinstance(other, Optional):
             return other.__or__(self)
         elif isinstance(other, Multi):
             return other.__or__(self)
@@ -286,6 +289,10 @@ class Amount(OccurrenceRegexPattern):
                     return Optional(self._pattern | other._pattern)
             elif (self._is_optional and other._is_simple) or (self._is_simple and other._is_optional):
                 return Optional(self._pattern | other._pattern)
+        elif isinstance(other, RegexPattern):
+            if self._is_simple and self._pattern == other:
+                return other
+        
         return Or(self, other)
     
     @property

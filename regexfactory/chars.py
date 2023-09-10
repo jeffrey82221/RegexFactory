@@ -9,18 +9,33 @@ More information about special characters in python regex available
 from functools import reduce
 from typing import Optional, List, Union
 from .pattern import RegexPattern
-from .patterns import Or
+from .patterns import Or, Amount, CompositionalRegexPattern
 from .utils import reduce_regex_list, find_merge_ways
 from regexfactory.pattern import RegexPattern, ValidPatternType
-
+import exrex
+import re
 
 class CharRegexPattern(RegexPattern):
     """
     Char-level Regex Pattern
     """
-    def __or__(self, a) -> 'CharRegexPattern':
-        if isinstance(a, CharRegexPattern):
-            union_examples = set.union(self.examples, a.examples)
+    def __or__(self, other: RegexPattern) -> 'CharRegexPattern':
+        if self == other:
+            return self
+        elif isinstance(other, CharRegexPattern) or (isinstance(other, Amount) and other._is_simple):
+            if isinstance(other, Amount):
+                if isinstance(other._pattern, CharRegexPattern):
+                    other = other._pattern
+                elif isinstance(other._pattern, RegexPattern):
+                    if ex:=CharRegexPattern.match_char_regex(other.examples):
+                        other = ex
+                    else:
+                        return Or(self, other)
+                else:
+                    return Or(self, other)
+            if self == other:
+                return self
+            union_examples = set.union(self.examples, other.examples)
             # check if the examples match those of the special characters
             if sp_char_regex:=SpecialCharRegexPattern.match_special_char_regex(union_examples):
                 return sp_char_regex
@@ -34,17 +49,37 @@ class CharRegexPattern(RegexPattern):
                 return regex_groups[0]
             else:
                 return Set(*sorted(list(union_examples)))
-        elif isinstance(a, Or):
-            if all(map(lambda x: isinstance(x, CharRegexPattern), a._patterns)):
-                union_examples = reduce(lambda x,y: x|y, map(lambda m: m.examples, a._patterns))
-                return self | Set(*list(union_examples))    
-        return Or(self, a)
+        elif isinstance(other, Or):
+            if all(map(lambda x: isinstance(x, CharRegexPattern), other._patterns)):
+                union_examples = reduce(lambda x,y: x|y, map(lambda m: m.examples, other._patterns))
+                return self | Set(*list(union_examples))
+        elif isinstance(other, RegexPattern) and not isinstance(other, CompositionalRegexPattern):
+            if other:= CharRegexPattern.match_char_regex(other.examples):
+                return self | other
+        return Or(self, other)
 
     
     @staticmethod
     def match_char_regex(examples: List[str]) -> Optional['CharRegexPattern']:
         if all(map(lambda x: len(x) == 1, examples)):
             return reduce(lambda x, y: x|y, map(CharRegexPattern, examples))
+    
+    @staticmethod
+    def convert_to_char_regex(pattern: ValidPatternType) -> 'CharRegexPattern':
+        if isinstance(pattern, CharRegexPattern):
+            return pattern
+        elif isinstance(pattern, RegexPattern):
+            char_regex = CharRegexPattern.match_char_regex(pattern.examples)
+            assert char_regex is not None
+            return char_regex
+        else:
+            if isinstance(pattern, re.Pattern):
+                pattern = pattern.pattern
+            examples = set(list(exrex.generate(str(pattern))))
+            char_regex = CharRegexPattern.match_char_regex(examples)
+            assert char_regex is not None
+            return char_regex
+                
 
 class SpecialCharRegexPattern(CharRegexPattern):
     @staticmethod
@@ -192,6 +227,7 @@ class Set(CharRegexPattern):
                 regex += self.get_regex(pattern)
         super().__init__(f"[{regex}]")
         self._patterns = patterns
+
 
 class NotSet(CharRegexPattern):
     """

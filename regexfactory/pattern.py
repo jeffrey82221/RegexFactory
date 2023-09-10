@@ -56,7 +56,12 @@ class RegexPattern:
 
     def __mul__(self, coefficient: int) -> "RegexPattern":
         """Treats :class:`RegexPattern` as a string and multiplies it by an integer."""
-        return RegexPattern(self.regex * coefficient)
+        assert coefficient >= 1
+        from regexfactory import Amount
+        if coefficient > 1:
+            return Amount(self, coefficient)
+        else:
+            return self
 
     def __eq__(self, other: Any) -> bool:
         """
@@ -190,3 +195,23 @@ class RegexPattern:
         
     def issubset(self, superset: 'RegexPattern') -> bool:
         return all([superset.fullmatch(x) is not None for x in self.examples])
+    
+    @staticmethod
+    def convert_to_regex_pattern(pattern: ValidPatternType) -> 'RegexPattern':
+        if isinstance(pattern, RegexPattern):
+            return pattern
+        else:
+            if isinstance(pattern, re.Pattern):
+                pattern = pattern.pattern
+            return RegexPattern(pattern)
+        
+    def __or__(self, other: 'RegexPattern') -> 'RegexPattern':
+        from regexfactory import Or
+        from regexfactory.chars import CharRegexPattern
+        from regexfactory.patterns import CompositionalRegexPattern
+        if self == other:
+            return self
+        elif isinstance(other, CompositionalRegexPattern) or isinstance(other, CharRegexPattern):
+            return other.__or__(self)
+        else:
+            return Or(self, other)

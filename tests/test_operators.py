@@ -1,13 +1,12 @@
 """
 TODO:
-- [ ] Enable union operation between CharRegexPattern and Amount{1}
+- [X] Enable union operation between CharRegexPattern and Amount{1}
 """
 from regexfactory import Set, NotSet, Range, Or
 from regexfactory import WORD, DIGIT, ANY
 from regexfactory import Amount, Multi, Optional
+from regexfactory.chars import CharRegexPattern
 from regexfactory import RegexPattern
-from regexfactory.chars import CharRegexPattern, SpecialCharRegexPattern
-
 def test_or_for_char_regex():
     assert Range('0', '4') | Range('3', '9') == DIGIT
     assert (Set('1') | Set('2')).regex == '[12]'
@@ -17,6 +16,15 @@ def test_or_for_char_regex():
     assert Range('0', '4') | Range('7', '9') == Or(Range('0', '4'), Range('7', '9'))
     assert Range('4', '7') | (Range('0', '4') | Range('7', '9')) == DIGIT 
     assert NotSet('a') | NotSet('b') == ANY
+    assert CharRegexPattern('1') | CharRegexPattern('3') == Set(*'13')
+    assert CharRegexPattern('1') | CharRegexPattern('3') | CharRegexPattern('2') == Range('1', '3')
+    assert CharRegexPattern('1') | CharRegexPattern('1') == CharRegexPattern('1')
+    assert CharRegexPattern('1') | Amount('1', 1) == CharRegexPattern('1')
+    assert Amount('1', 1) | CharRegexPattern('1') == CharRegexPattern('1')
+    assert Amount('1', 1) | RegexPattern('1') == CharRegexPattern('1')
+    assert Amount('1', 1) | CharRegexPattern('2') == Set(*'12')
+    assert Amount('1', 1) | CharRegexPattern('2') | RegexPattern('3') == Range('1', '3')
+    
 
 def test_or_for_compositional_regex():
     assert Or(Range('1', '4'), Set(*['a', 'b'])) | Set(*['a', 'b']) == Or(Range('1', '4'), Set(*['a', 'b']))
@@ -38,18 +46,11 @@ def test_or_for_compositional_regex():
     assert Amount(Set('a'), 1, 3) | Multi(Set(*'ab'), match_zero=True) == Multi(Set(*'ab'), match_zero=True)
     assert Multi(Set('a')) | Amount(Set(*'ab'), 1, or_more=True) == Multi(Set(*'ab')) 
     assert Amount('a', 4, 6) | Optional('a') == Or(Amount('a', 4, 6), Optional('a'))
-def test_match_special_chars():
-    assert SpecialCharRegexPattern.match_special_char_regex(
-        ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']
-    ) == DIGIT
-    assert SpecialCharRegexPattern.match_special_char_regex(
-        ['0', '1', '2', '3', '4']
-    ) == None
+    assert Amount('12', 1) | RegexPattern('12') == RegexPattern('12')
+    assert RegexPattern('12') | Amount('12', 1) == RegexPattern('12')
 
-def test_match_single_chars():
-    assert CharRegexPattern.match_char_regex(
-        ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']
-    ) == DIGIT
-    assert CharRegexPattern.match_char_regex(
-        ['3', '4', '5', '6']
-    ) == Range('3', '6')
+def test_or_for_simple_cases():
+    assert RegexPattern('123') | RegexPattern('123') == RegexPattern('123')
+    assert RegexPattern('123') | RegexPattern('456') == Or(RegexPattern('123'), RegexPattern('456'))
+    assert RegexPattern('1') | CharRegexPattern('1') == CharRegexPattern('1')
+    assert RegexPattern('1') | CharRegexPattern('3') == Set(*'13')

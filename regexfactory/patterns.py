@@ -194,6 +194,20 @@ class Optional(OccurrenceRegexPattern):
                 return Optional(self._pattern | other)
         return Or(self, other)
 
+    def __add__(self, other: RegexPattern) -> RegexPattern:
+        if isinstance(other, Optional) and self._pattern == other._pattern:
+            return Amount(self._pattern, 0, 2)
+        elif isinstance(other, Multi) and self._pattern == other._pattern:
+            return other
+        elif isinstance(other, Amount) and self._pattern == other._pattern:
+            if other._or_more:
+                return other
+            elif other._j is not None:
+                return Amount(other._pattern, other._i, j=other._j + 1)
+            else:
+                return Amount(other._pattern, other._i, j=other._i+1)
+        else:
+            return other.__add__(self)
 
 class Multi(OccurrenceRegexPattern):
     """
@@ -251,6 +265,22 @@ class Multi(OccurrenceRegexPattern):
             if self._pattern == other:
                 return self
         return Or(self, other)
+    
+    def __add__(self, other: RegexPattern) -> RegexPattern:
+        if isinstance(other, Amount) and self._pattern == other._pattern:
+            if self._match_zero:
+                return Amount(self._pattern, 0, or_more=True) + other
+            else:
+                return Amount(self._pattern, 1, or_more=True) + other
+        elif isinstance(other, Multi) and self._pattern == other._pattern:
+            if self._match_zero and other._match_zero:
+                return self
+            elif self._match_zero != other._match_zero:
+                return Multi(self._pattern, match_zero=False)
+            else:
+                return Amount(self._pattern, 2, or_more=True)
+        else:
+            return other.__add__(self)
 
 
 class Amount(OccurrenceRegexPattern):
@@ -321,13 +351,9 @@ class Amount(OccurrenceRegexPattern):
             if self._pattern == other._pattern:
                 if self._j is not None:
                     if other._j is not None:
-                        # self (i, ..., j)
-                        # other (i, ..., j)
                         if len(set(range(self._i, self._j + 1)) & set(range(other._i, other._j + 1))):
                             return Amount(self._pattern, min(self._i, other._i), j=max(self._j, other._j))
                     elif other._or_more:
-                        # self (i, ... j)
-                        # other (i, ...)
                         if other._i <= self._j:
                             result = Amount(self._pattern, min(self._i, other._i), or_more=True)
                             if result.is_multi:
@@ -335,15 +361,11 @@ class Amount(OccurrenceRegexPattern):
                             else:
                                 return result
                     else:
-                        # self: (i, ..., j)
-                        # other: (i)
                         if self._i <= other._i and other._i <= self._j:
                             return self
 
                 elif self._or_more:
                     if other._j is not None:
-                        # self (i, ...)
-                        # other (i, ..., j)
                         if self._i <= other._j:
                             result = Amount(self._pattern, min(self._i, other._i), or_more=True)
                             if result.is_multi:
@@ -351,35 +373,25 @@ class Amount(OccurrenceRegexPattern):
                             else:
                                 return result
                     elif other._or_more:
-                        # self (i, ...)
-                        # other (i, ...)
                         result = Amount(self._pattern, min(self._i, other._i), or_more=True)
                         if result.is_multi:
                             return result.to_multi()
                         else:
                             return result
                     else:
-                        # self (i, ...)
-                        # other (i)
                         if other._i >= self._i:
                             return self
                 else:
                     if other._j is not None:
-                        # self (i)
-                        # other (i, ..., j)
                         if other._i <= self._i and self._i <= other._j:
                             return other
                     elif other._or_more:
-                        # self (i)
-                        # other (i, ...)
                         if other._i <= self._i:
                             if other.is_multi:
                                 return other.to_multi()
                             else:
                                 return other
                     else:
-                        # self (i)
-                        # other (i)
                         if self._i == other._i:
                             return self
             elif self._i == other._i and self._j == other._j and self._or_more == other._or_more:
@@ -436,3 +448,22 @@ class Amount(OccurrenceRegexPattern):
     @property
     def _is_empty(self) -> bool:
         return self._i == 0 and self._j is None and not self._or_more
+
+
+    def __add__(self, other: RegexPattern) -> RegexPattern:
+        if isinstance(other, Amount) and self._pattern == other._pattern:
+            if self._or_more and other._or_more:
+                return Amount(self._pattern, self._i + other._i, or_more=True)
+            elif self._or_more != other._or_more:
+                return Amount(self._pattern, self._i + other._i, or_more=True)
+            else:
+                if self._j is not None and other._j is not None:
+                    return Amount(self._pattern, self._i + other._i, self._j + other._j)
+                elif (self._j is not None and other._j is None):
+                    return Amount(self._pattern, self._i + other._i, self._j + other._i)
+                elif (self._j is None and other._j is not None):
+                    return Amount(self._pattern, self._i + other._i, self._i + other._j)
+                else:
+                    return Amount(self._pattern, self._i + other._i)
+        else:
+            return other.__add__(self)

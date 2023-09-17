@@ -45,15 +45,37 @@ class RegexPattern:
     def __str__(self) -> str:
         return self.regex
 
-    def __add__(self, other: ValidPatternType) -> "RegexPattern":
-        """Adds two :class:`ValidPatternType`'s together, into a :class:`RegexPattern`"""
-        try:
-            other = self.get_regex(other)
-        except TypeError:
-            return NotImplemented
+    def __add__(self, other: ValidPatternType) -> 'LongRegexPattern':
+        """Adds two :class:`ValidPatternType`'s together, into a :class:`LongRegexPattern`"""
+        from regexfactory import Amount
+        from regexfactory import patterns
+        if isinstance(other, RegexPattern):
+            if self == other:
+                return Amount(self, 2)
+            elif isinstance(other, patterns.OccurrenceRegexPattern) and self == other._pattern:
+                if isinstance(other, patterns.Optional):
+                    return Amount(self, 1, 2)
+                elif isinstance(other, patterns.Multi):
+                    if other._match_zero:
+                        return patterns.Multi(self, match_zero=False)
+                    else:
+                        return patterns.Amount(self, 2, or_more=True)
+                else:
+                    return Amount(self, other._i + 1, j=other._j, or_more=other._or_more)
+            elif isinstance(other, LongRegexPattern):
+                patterns = [self] + other._patterns
+                return LongRegexPattern(*patterns)
+            else:
+                return LongRegexPattern(*[self, other])
+        else:
+            try:
+                other = self.get_regex(other)
+            except TypeError:
+                return NotImplemented
 
-        return RegexPattern(self.regex + other)
+            return RegexPattern(self.regex + other)
 
+    
     def __mul__(self, coefficient: int) -> "RegexPattern":
         """Treats :class:`RegexPattern` as a string and multiplies it by an integer."""
         assert coefficient >= 1
@@ -218,3 +240,46 @@ class RegexPattern:
             return other.__or__(self)
         else:
             return Or(self, other)
+
+
+class LongRegexPattern(RegexPattern):
+    def __init__(
+        self,
+        *patterns: ValidPatternType,
+    ) -> None:
+        assert len(patterns) > 1, f'LongRegexPattern should have more than 2 elements, but now patterns={patterns}'
+        super_input = ''
+        for pattern in patterns:
+            super_input += self.get_regex(pattern)
+        super().__init__((super_input))        
+        self._patterns = list(patterns)
+
+    def __add__(self, other: RegexPattern) -> RegexPattern:
+        from regexfactory import Amount
+        if isinstance(other, LongRegexPattern):
+            if self == other:
+                return Amount(self, 2)
+            touch_merged = self._patterns[-1] + other._patterns[0]
+            if not isinstance(touch_merged, LongRegexPattern):
+                if len(self._patterns[:-1]) > 1:
+                    left = LongRegexPattern(self._patterns[:-1])
+                elif len(self._patterns[:-1]) == 1:
+                    left = self._patterns[0]
+                if len(other._patterns[1:]) > 1:
+                    right = LongRegexPattern(other._patterns[1:])
+                elif len(self._patterns[1:]) == 1:
+                    right = other._patterns[-1]
+                return left + touch_merged + right
+            else:
+                patterns = self._patterns + other._patterns
+        else:
+            touch_merged = self._patterns[-1] + other
+            if not isinstance(touch_merged, LongRegexPattern):
+                if len(self._patterns[:-1]) > 1:
+                    left = LongRegexPattern(self._patterns[:-1])
+                elif len(self._patterns[:-1]) == 1:
+                    left = self._patterns[0]
+                return left + touch_merged
+            else:
+                patterns = self._patterns + [other]
+        return LongRegexPattern(*patterns)

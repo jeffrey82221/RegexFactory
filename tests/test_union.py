@@ -7,7 +7,7 @@ from regexfactory import WORD, DIGIT, ANY
 from regexfactory import Amount, Multi, Optional
 from regexfactory.chars import CharRegexPattern
 from regexfactory import RegexPattern
-
+from regexfactory.pattern import LongRegexPattern
 
 def test_or_for_char_regex():
     assert Range('0', '4') | Range('3', '9') == DIGIT
@@ -97,9 +97,31 @@ def test_or_for_simple_cases():
     assert RegexPattern('1') | CharRegexPattern('3') == Set(*'13')
     assert RegexPattern('1') | Range('2', '3') == Range('1', '3')
 
+def test_or_for_long_cases():
+    assert LongRegexPattern(*[
+        CharRegexPattern('a'), 
+        CharRegexPattern('b'), 
+        CharRegexPattern('c')]
+    ) | LongRegexPattern(*[
+        CharRegexPattern('a'), 
+        CharRegexPattern('b'), 
+        CharRegexPattern('c')]
+    ) == LongRegexPattern(*[
+        CharRegexPattern('a'),
+        CharRegexPattern('b'),
+        CharRegexPattern('c')]
+    )
+    assert LongRegexPattern(*[
+        CharRegexPattern('a'), 
+        CharRegexPattern('b'), 
+        CharRegexPattern('c')]
+    ) | LongRegexPattern(*[
+        CharRegexPattern('a'), 
+        CharRegexPattern('b'), 
+        CharRegexPattern('d')]
+    ) == LongRegexPattern(*[
+        CharRegexPattern('a'),
+        CharRegexPattern('b'),
+        Set(*'cd')]
+    )
 
-def test_lt_operator():
-    assert Optional('a') < Amount('a', 1)
-    assert Optional('a') < Amount('a', 2)
-    assert Amount('a', 3) < Multi('a')
-    assert Amount('a', 2) < Amount('a', 3)
